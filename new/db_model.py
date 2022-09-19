@@ -1,6 +1,6 @@
 from typing import Tuple, List, Dict
 
-from prettytable import PrettyTable
+from consoletable import ConsoleTable as ct
 from dbquery import Query
 from database_exceptions import NotNullViolation
 
@@ -16,6 +16,15 @@ class DBModel():
     def __init__(self, dbname=DBNAME):
         self._dbname = dbname
         self._schemas = dict()
+
+    def get(self):
+        if not self._schemas:
+            self.build()
+        return self
+
+    def build(self):
+        for key in self._schemas:
+            self.schema[key].build()
 
     @property
     def dbname(self):
@@ -34,18 +43,20 @@ class DBModel():
         self._schemas[name] = Schema(name)
 
 
-class Schema(DBModel):
+class Schema():
     def __init__(self, name: str):
         self.name = name
         self._tables = dict()
-        super().__init__()
+        self.build()
 
-    def build_schema(self):
-        """
-        Actually sets only the tables to preserve performance. I think.
-        """
-        unpacked_tables = self._unpack_tables(self._get_table_names_from_db())
-        self._build_tables(unpacked_tables)
+    def get(self):
+        if not self.tables:
+            self.build()
+        return self
+
+    def build(self):
+        unpacked_tables = self._unpack(self._get_table_names_from_db())
+        self._add_to_self(unpacked_tables)
 
     def _get_table_names_from_db(self, table_types: Tuple =TABLE_TYPES):
         tables = []
@@ -53,20 +64,17 @@ class Schema(DBModel):
             tables.append(Query.get_tables(self.name, table_type))
         return tables
 
-    def _unpack_tables(self, tables: List[List[Tuple]]) -> list:
+    def _unpack(self, tables: List[List[Tuple]]) -> list:
         table_list = []
         for table in tables[0]:
             table_list.append(*table)
         return table_list
 
-    def _build_tables(self, unpacked_tables):
-        for table in unpacked_tables:
-            self._add_table(table)
-
-    def _add_table(self, table_name):
-        table = Table(table_name)
-        setattr(self, table_name, table)
-        self._tables[table_name] = table
+    def _add_to_self(self, table_names):
+        for table_name in table_names:    
+            table = Table(table_name)
+            setattr(self, table_name, table)    # To be considered
+            self._tables[table_name] = table
 
     @property
     def tables(self):
@@ -77,7 +85,7 @@ class Schema(DBModel):
         self._tables[name] = Table(name)
 
 
-class Table(Schema):
+class Table():
     def __init__(self, name: str):
         self.name = name
         self._columns = dict()
@@ -85,11 +93,19 @@ class Table(Schema):
     def __str__(self):
         return f"Table: {str(self.name)} \nColumns: {self.columns}\n"
 
-    def get_columns_from_db(self) -> Tuple:
-        for columns in Query.get_columns(SCHEMA, self.name, COLUMN_METADATA):
-            self._attach_columns_to_table(columns)
+    def get(self):
+        if not self.columns:
+            self._get_columns_from_db
+        return self
 
-    def _attach_columns_to_table(self, columns: Tuple):
+    def build(self):
+        self._get_columns_from_db
+
+    def _get_columns_from_db(self) -> Tuple:
+        for columns in Query.get_columns(SCHEMA, self.name, COLUMN_METADATA):
+            self._add_to_self(columns)
+
+    def _add_to_self(self, columns: Tuple):
         column_metadata = dict(zip(COLUMN_METADATA, columns))
         self.columns = column_metadata
 
@@ -107,8 +123,10 @@ class Table(Schema):
 
 class Column():
     def __init__(self, column_metadata: dict):
+        self._metadata = dict()
         for key in column_metadata:
-            setattr(self, key, column_metadata[key])
+            setattr(self, key, column_metadata[key])   # To be considered
+            self._metadata[key] = column_metadata[key]
 
     def __str__(self):
         string = '\n'
@@ -117,25 +135,20 @@ class Column():
             string += f'{key}: {self.__dict__.get(key)}\n'
         return string
 
+    def get(self):
+        return self
+
+
 
 #
 # Workbench for ideas TBC
 #
 
-database_model = DBModel()
-database_model.schemas = 'home'
+db= DBModel()
 
-database_model.schemas['home'].build_schema()
-database_model.schemas['home'].home_measures.get_columns_from_db()
-database_model.schemas['home'].illuminance.get_columns_from_db()
 
-print(database_model.schemas['home'].tables)
-print(database_model.schemas['home'].tables['home_measures'].columns)
 
-second_col = [x for x in database_model.schemas['home'].tables['illuminance'].columns.keys()]
-second_col.extend([' ',' '])
-
-pt = PrettyTable()
-pt.add_column('home_measures', [x for x in database_model.schemas['home'].tables['home_measures'].columns.keys()])
-pt.add_column('illuminance',  second_col)
-print(pt)
+# headers = [x for x in database_model.schemas['home'].tables]
+# columns = [[x for x in y.columns.keys()] for y in database_model.schemas['home'].tables.values()]
+# table = ct.make_table_by_columns(headers, columns)
+# print(table)
