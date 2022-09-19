@@ -1,4 +1,6 @@
 from typing import Tuple, List, Dict
+from collections import defaultdict as dd
+import time
 
 from consoletable import ConsoleTable as ct
 from dbquery import Query
@@ -10,12 +12,17 @@ SCHEMA = 'home'
 
 TABLE_TYPES = ('base table',)
 COLUMN_METADATA = ('column_name', 'is_nullable', 'data_type')
+EXCLUDED_SCHEMAS = ('pg_catalog', 'information_schema', 'pg_toast')
 
 
 class DBModel():
     def __init__(self, dbname=DBNAME):
         self._dbname = dbname
         self._schemas = dict()
+        self.get()
+
+    def __str__(self):
+        return self._dbname
 
     def get(self):
         if not self._schemas:
@@ -23,8 +30,26 @@ class DBModel():
         return self
 
     def build(self):
-        for key in self._schemas:
-            self.schema[key].build()
+        self._add_to_self(self._get_schema_names_from_db())
+
+    def _get_schema_names_from_db(self):
+        return Query.get_schemas(
+            self.dbname, 
+            self.convert_to_string(EXCLUDED_SCHEMAS)
+            )
+
+    def _add_to_self(self, schemas: Tuple[Tuple]):
+        for schema_name in schemas:
+            schema_object = Schema(schema_name[0])
+            self.schemas[schema_name[0]] = schema_object
+            setattr(self, schema_name[0], schema_object)
+
+    @staticmethod
+    def convert_to_string(an_iterable):
+        converted = ''
+        for x in an_iterable:
+            converted += f"'{x}',"
+        return converted[:-1]
 
     @property
     def dbname(self):
@@ -46,8 +71,11 @@ class DBModel():
 class Schema():
     def __init__(self, name: str):
         self.name = name
-        self._tables = dict()
-        self.build()
+        self._table_objects = dict()
+        self.get()
+
+    def __str__(self):
+        return self.name
 
     def get(self):
         if not self.tables:
@@ -64,7 +92,7 @@ class Schema():
             tables.append(Query.get_tables(self.name, table_type))
         return tables
 
-    def _unpack(self, tables: List[List[Tuple]]) -> list:
+    def _unpack(self, tables: Tuple[List[Tuple]]) -> list:
         table_list = []
         for table in tables[0]:
             table_list.append(*table)
@@ -72,34 +100,36 @@ class Schema():
 
     def _add_to_self(self, table_names):
         for table_name in table_names:    
-            table = Table(table_name)
+            table = Table(table_name, self.name)
             setattr(self, table_name, table)    # To be considered
-            self._tables[table_name] = table
+            self._table_objects[table_name] = table
 
     @property
     def tables(self):
-        return self._tables
+        return self._table_objects
 
     @tables.setter
     def tables(self, name: str):
-        self._tables[name] = Table(name)
+        self._table_objects[name] = Table(name, self.name)
 
 
 class Table():
-    def __init__(self, name: str):
+    def __init__(self, name: str, schema: str):
         self.name = name
+        self._schema = schema
         self._columns = dict()
+        self.get()
 
     def __str__(self):
-        return f"Table: {str(self.name)} \nColumns: {self.columns}\n"
+        return f"Table: {str(self.name)} \nColumns: {list(self.columns.keys())}\n"
 
     def get(self):
         if not self.columns:
-            self._get_columns_from_db
+            self.build()
         return self
 
     def build(self):
-        self._get_columns_from_db
+        self._get_columns_from_db()
 
     def _get_columns_from_db(self) -> Tuple:
         for columns in Query.get_columns(SCHEMA, self.name, COLUMN_METADATA):
@@ -107,18 +137,17 @@ class Table():
 
     def _add_to_self(self, columns: Tuple):
         column_metadata = dict(zip(COLUMN_METADATA, columns))
-        self.columns = column_metadata
+        column = Column(column_metadata)
+        setattr(self, column_metadata['column_name'], column)
+        self._columns[column_metadata['column_name']] = column
 
     @property
     def columns(self):
         return self._columns
 
     @columns.setter
-    def columns(self, column_metadata: Dict):
-        if column_metadata['column_name']:
-            self._columns[column_metadata['column_name']] = Column(column_metadata)
-        else:
-            raise ValueError("'column_name' missing in column header")
+    def columns(self, name: str):
+        self._columns[name] = Column(name)
 
 
 class Column():
@@ -128,27 +157,76 @@ class Column():
             setattr(self, key, column_metadata[key])   # To be considered
             self._metadata[key] = column_metadata[key]
 
-    def __str__(self):
-        string = '\n'
-        print(self.__dict__)
-        for key in self.__dict__.keys():
-            string += f'{key}: {self.__dict__.get(key)}\n'
-        return string
+    # def __str__(self):
+    #     string = '\n'
+    #     for key in self.__dict__.keys():
+    #         string += f'{key}: {self.__dict__.get(key)}\n'
+    #     return string
 
     def get(self):
         return self
 
 
+class Printer():
+    def __init__(self, db: DBModel, schema_name: str, table_names: Tuple):
+        self.db = db
+        self.table_names = table_names
+        self.schema_name = schema_name
+        self._table_objects = []
+        self._printables = []
+        self.print_tables_to_console()
+
+    def print_tables_to_console(self):
+        self._prepare_to_print()
+        for table in self._printables:
+            print(table, '\n')
+
+    def _prepare_to_print(self):
+        self._get_table_objects_from_db_model()
+        self._serialize(self._get_columns())
+
+    def _get_table_objects_from_db_model(self) -> List[Table]:
+        for table_name in self.table_names:
+            self._table_objects.append(
+                self.db.schemas[self.schema_name].tables[table_name]
+            )
+
+    def _get_columns(self) -> Dict:
+        tables_to_be_printed = dd(list)
+        for table in self._table_objects:
+            for column in table.columns.values():
+                tables_to_be_printed[table.name].append(
+                    [
+                        column.column_name,
+                        column.is_nullable,
+                        column.data_type
+                    ]
+                )
+        return tables_to_be_printed
+
+    def _serialize(self, tables: Dict):
+        for table_name, columns in tables.items():
+            columns = [
+                [x[0] for x in columns],
+                [x[1] for x in columns],
+                [x[2] for x in columns]
+            ]
+            self._printables.append(
+                ct.make(
+                    tuple(COLUMN_METADATA),
+                    tuple(columns),
+                    table_name.capitalize()
+                )
+            )
 
 #
 # Workbench for ideas TBC
 #
 
-db= DBModel()
+db = DBModel()
 
 
+print(repr(db.schemas['home'].tables['home_measures']))
 
-# headers = [x for x in database_model.schemas['home'].tables]
-# columns = [[x for x in y.columns.keys()] for y in database_model.schemas['home'].tables.values()]
-# table = ct.make_table_by_columns(headers, columns)
-# print(table)
+t = tuple(['home_measures', 'illuminance'])
+Printer(db, 'home', t)

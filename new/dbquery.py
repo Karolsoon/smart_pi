@@ -12,7 +12,20 @@ class Query():
     def execute(self, query):
         with pgd() as pgdb:
             pgdb.cursor.execute(query)
-            return pgdb.cursor.fetchall()
+            return tuple(pgdb.cursor.fetchall())
+    
+    @classmethod
+    def get_schemas(cls, dbname: str, excluded: str):
+        query = f"""
+            SELECT DISTINCT
+                schema_name
+            FROM 
+                information_schema."schemata" s
+            WHERE
+                lower(catalog_name) = '{dbname.lower()}' AND
+                lower(schema_name) NOT IN ({excluded});
+        """
+        return cls.execute(query)
 
     @classmethod
     def get_tables(cls, schema: str, table_type: str):
