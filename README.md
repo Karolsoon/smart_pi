@@ -1,2 +1,2 @@
 # smart_pi
-A refactoring process of a working application to collect sensor data in a remote Postgres instance. Serves to practice and improve clean code.
+An application package to monitor temperature, humidity, pressure an illuminance with remote PostgreSQL backend support.
