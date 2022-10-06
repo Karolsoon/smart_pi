@@ -1,5 +1,15 @@
+# Secrets
+*/credentials.py
+*/secrets.py
+*log.txt
+.gitignore
+
+# Project specific test files
+*poligon.py
+
 # Byte-compiled / optimized / DLL files
-__pycache__/
+*__pycache__/
+
 *.py[cod]
 *$py.class
 
@@ -127,3 +137,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+.gitignore

@@ -1,4 +1,5 @@
 import psycopg2
+
 import credentials
 
 USER = credentials.USER

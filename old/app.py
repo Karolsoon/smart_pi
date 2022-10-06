@@ -41,38 +41,38 @@ def convert_temp(temperature, room):
             logfile.write(f'{datetime.datetime.now()} - {room} - Received wrong temperature format')
             return (None, "Received wrong format")
 
-def convert_c_to_k(temperature_c):
-    """
-    Converts temperature in celsius to kelvin
-    """
-    return temperature_c + 273.15
+# def convert_c_to_k(temperature_c):
+#     """
+#     Converts temperature in celsius to kelvin
+#     """
+#     return temperature_c + 273.15
 
-def convert_to_sea_level(atmospheric_pressure_hpa, temperature_c):
-    """
-    Calculates the sea_level_pressure based on the 
-    atmospheric pressure and temperature measurements
-    """
-    # Declare constant values for my location
-    altitude = wysokosc = 100
-    latitude = szer_geo = 51.659167
-    gas_constant = stala_gazowa = 8.31446261815324
-    air_molar_mass = masa_molowa_powietrza = 0.0289644
-    atmospheric_pressure_bar = atmospheric_pressure_hpa / 1000
+# def convert_to_sea_level(atmospheric_pressure_hpa, temperature_c):
+#     """
+#     Calculates the sea_level_pressure based on the 
+#     atmospheric pressure and temperature measurements
+#     """
+#     # Declare constant values for my location
+#     altitude = wysokosc = 100
+#     latitude = szer_geo = 51.659167
+#     gas_constant = stala_gazowa = 8.31446261815324
+#     air_molar_mass = masa_molowa_powietrza = 0.0289644
+#     atmospheric_pressure_bar = atmospheric_pressure_hpa / 1000
 
-    # Calculate and/or convert values
-    temperature_k = convert_c_to_k(temperature_c)
-    gravitational_acceleration = 9.780318 * (1 + (0.0053024 * sin(latitude) ** 2) - \
-        (0.0000058 * sin(2 * latitude) ** 2) - 3.086 * 10 ** (-6) * altitude)
+#     # Calculate and/or convert values
+#     temperature_k = convert_c_to_k(temperature_c)
+#     gravitational_acceleration = 9.780318 * (1 + (0.0053024 * sin(latitude) ** 2) - \
+#         (0.0000058 * sin(2 * latitude) ** 2) - 3.086 * 10 ** (-6) * altitude)
 
-    # Calculate the sea_level_pressure
-    sea_level_pressure = atmospheric_pressure_bar / (1 \
-            - (air_molar_mass * gravitational_acceleration * altitude) \
-                / (gas_constant * temperature_k))
+#     # Calculate the sea_level_pressure
+#     sea_level_pressure = atmospheric_pressure_bar / (1 \
+#             - (air_molar_mass * gravitational_acceleration * altitude) \
+#                 / (gas_constant * temperature_k))
 
-    sea_level_pressure_hpa = sea_level_pressure * 1000
-    print(f'Sea level: {sea_level_pressure_hpa} \n Pressure: {atmospheric_pressure_hpa}')
+#     sea_level_pressure_hpa = sea_level_pressure * 1000
+#     print(f'Sea level: {sea_level_pressure_hpa} \n Pressure: {atmospheric_pressure_hpa}')
 
-    return round(sea_level_pressure_hpa, 0)
+#     return round(sea_level_pressure_hpa, 0)
 
 def trzeci_pokoj():
     """
