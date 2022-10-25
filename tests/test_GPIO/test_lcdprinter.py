@@ -1,12 +1,13 @@
 import pytest
-from mockito import when, mock, unstub
 
-
+from tests.test_GPIO.stub.lcd_stub import LCDStub
 from GPIO.lcdprinter import LCDPrinter
+
 
 @pytest.fixture(scope='function')
 def printer():
-    yield LCDPrinter(0x27)
+    lcd = LCDStub()
+    yield LCDPrinter(lcd)
 
 
 @pytest.fixture(scope='function')
@@ -32,47 +33,41 @@ def incorrect_lines():
     yield lines_to_print
 
 
-def test_raises_exception_when_lcd_is_not_coneccted():
-    with pytest.raises(Exception) as exp:
-        printer = LCDPrinter(0x28)
-    assert str(exp.value) == 'LCD screen is not connected'
-
-
 def test_lines_to_print_is_a_dict(correct_lines, printer):
-    printer.lines = correct_lines
-    assert isinstance(printer.lines, dict)
+    printer.set_lines(correct_lines)
+    assert isinstance(printer.get_lines(), dict)
 
 
 def test_raises_exception_when_lines_are_not_a_dict(incorrect_lines, printer):
     with pytest.raises(Exception) as exp:
-        printer.lines = tuple(incorrect_lines.values())
+        printer.set_lines(tuple(incorrect_lines.values()))
     assert str(exp.value) == ('Expected dict, got tuple instead.')
 
 
 def test_dict_with_lines_has_correct_number_of_lines(correct_lines, printer):
-    printer.lines = correct_lines
-    assert len(printer.lines) >= 0
-    assert len(printer.lines) <= 4
+    printer.set_lines(correct_lines)
+    assert len(printer.get_lines()) >= 0
+    assert len(printer.get_lines()) <= 4
 
 
 def test_raise_exception_when_incorrect_dict_length(incorrect_lines, printer):
     with pytest.raises(Exception) as exp:
-        printer.lines = incorrect_lines
+        printer.set_lines(incorrect_lines)
     assert str(exp.value) == (
         f'Exceeded max number of lines: {len(incorrect_lines)}. Limit is 4'
         )
 
 
 def test_lines_have_correct_length(correct_lines, printer):
-    printer.lines = correct_lines
-    for line in printer.lines.values():
+    printer.set_lines(correct_lines)
+    for line in printer.get_lines().values():
         assert len(line) >= 0
         assert len(line) <= 20
 
 
 def test_raise_exception_when_incorrect_content_length(incorrect_lines, printer):
     with pytest.raises(Exception) as exp:
-        printer.lines = {2: incorrect_lines[4]}
+        printer.set_lines({2: incorrect_lines[4]})
         assert str(exp.value) == (
             f'Exceeded max number of lines: {len(max(incorrect_lines))}. Limit is 4'
         )
@@ -80,15 +75,15 @@ def test_raise_exception_when_incorrect_content_length(incorrect_lines, printer)
 
 def test_clear(printer):
     printer.clear()
-    for line in printer.lines.values():
+    for line in printer.get_lines().values():
         assert line == ' ' * 20
 
 
 def test_clear_line(printer):
     printer.clear_line(2)
-    assert printer.lines[2] == ' ' * 20
+    assert printer.get_lines()[2] == ' ' * 20
 
 
 def test_print(printer):
-    # No idea how to do that
+    # @TODO No idea how to do that
     pass

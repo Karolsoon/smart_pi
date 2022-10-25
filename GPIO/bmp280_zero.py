@@ -23,7 +23,7 @@ class BMP280_zero():
 
     def __convert_to_sea_level(self, atmospheric_pressure_hpa, temperature_c):
         temperature_k = self._convert_celsius_to_kelvin(temperature_c)
-        gravitational_acceleration = self.__get_gravitational_acceleration()
+        gravitational_acceleration = self._get_gravitational_acceleration()
         sea_level_pressure_hpa = self.__calculate_sea_level_pressure(
                                     atmospheric_pressure_hpa,
                                     gravitational_acceleration,
@@ -34,7 +34,7 @@ class BMP280_zero():
     def _convert_celsius_to_kelvin(self, temperature_c):
         return temperature_c + 273.15
 
-    def __get_gravitational_acceleration(self):
+    def _get_gravitational_acceleration(self):
         return (
               9.780318 \
             * (

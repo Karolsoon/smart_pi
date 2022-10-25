@@ -1,0 +1,2 @@
+class TooManyHeadersError(Exception):
+    pass

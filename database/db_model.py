@@ -2,9 +2,9 @@ from typing import Tuple, List, Dict
 from collections import defaultdict as dd
 import time
 
-from consoletable import ConsoleTable as ct
+from consoletable import ConsoleTable
 from dbquery import Query
-from database_exceptions import NotNullViolation
+
 
 
 DBNAME = 'smart_home'
@@ -149,6 +149,10 @@ class Table():
     def columns(self, name: str):
         self._columns[name] = Column(name)
 
+    @property
+    def schema(self):
+        return self._schema
+
 
 class Column():
     def __init__(self, column_metadata: dict):
@@ -157,12 +161,6 @@ class Column():
             setattr(self, key, column_metadata[key])   # To be considered
             self._metadata[key] = column_metadata[key]
 
-    # def __str__(self):
-    #     string = '\n'
-    #     for key in self.__dict__.keys():
-    #         string += f'{key}: {self.__dict__.get(key)}\n'
-    #     return string
-
     def get(self):
         return self
 
@@ -170,6 +168,7 @@ class Column():
 class Printer():
     def __init__(self, db: DBModel, schema_name: str, table_names: Tuple):
         self.db = db
+        self.ct = ConsoleTable()
         self.table_names = table_names
         self.schema_name = schema_name
         self._table_objects = []
@@ -212,7 +211,7 @@ class Printer():
                 [x[2] for x in columns]
             ]
             self._printables.append(
-                ct.make(
+                self.ct.make(
                     tuple(COLUMN_METADATA),
                     tuple(columns),
                     table_name.capitalize()
@@ -222,7 +221,7 @@ class Printer():
 #
 # Workbench for ideas TBC
 #
-
+"""
 db = DBModel()
 
 
@@ -230,3 +229,16 @@ print(repr(db.schemas['home'].tables['home_measures']))
 
 t = tuple(['home_measures', 'illuminance'])
 Printer(db, 'home', t)
+"""
+
+t = Table('illuminance', 'home')
+q = Query(t)
+result = q.read({'room': 'duzy pokoj'})
+import pdb
+pdb.set_trace()
+
+# Pomysl na db_driver - nadpisać obiekty Column wartościami
+# kolejnosc t.columns to ts_id, illuminance, room
+# t.columns['ts_id'] = result[0][0]
+# t.columns['illuminance'] = result[0][1]
+# t.columns[']

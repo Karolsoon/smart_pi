@@ -35,4 +35,4 @@ def test_convert_celsius_to_kelvin(BMP, temp_c, expected):
 def test_get_gravitational_acceleration(BMP, latitude, altitude, expected):
     BMP.latitude = latitude
     BMP.altitude = altitude
-    assert BMP._BMP280_zero__get_gravitational_acceleration() == expected
+    assert BMP._get_gravitational_acceleration() == expected

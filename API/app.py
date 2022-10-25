@@ -1,6 +1,7 @@
 import threading
 
 from GPIO.lcdprinter import LCDPrinter
+from GPIO.bmp280_zero import BMP280_zero
 
 
 #@app.route("/threads", methods=['GET'])
@@ -36,3 +37,5 @@ def zona(data):
     #         i = 1
     #         lcd.clear()
     # return response
+
+
