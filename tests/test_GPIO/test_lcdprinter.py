@@ -1,7 +1,9 @@
 import pytest
+import datetime
 
 from tests.test_GPIO.stub.lcd_stub import LCDStub
-from GPIO.lcdprinter import LCDPrinter
+from tests.test_database.test_dbquery import querymaker, setup, valid_credentials
+from GPIO.lcdprinter import HomeMode4x20, LCDPrinter
 
 
 @pytest.fixture(scope='function')
@@ -87,3 +89,25 @@ def test_clear_line(printer):
 def test_print(printer):
     # @TODO No idea how to do that
     pass
+
+#
+# TEST HomeMode4x20
+#
+
+def test_reuired_table_returns_tuple_of_table_names():
+    home = HomeMode4x20()
+    assert home.get_required_tables() == ('home_measures', 'illuminance')
+
+
+def test_build_lines_returns_dict(querymaker):
+    dataset = querymaker.get_transformed_latest(('home_measures','illuminance'))
+    home = HomeMode4x20()
+    lines = home.build_lines(dataset, 'UP')
+    date = datetime.date.today().isoformat().split('-')
+    date_formatted = f'{date[2]}.{date[1]}.{date[0]}'
+    assert lines == {
+        1: f'{date_formatted} 990hPa ↑',
+        2: 'DP:26.10C  100lx 75%',
+        3: 'DZ:27.10C  TP:28.10C',
+        4: '                    '
+    }

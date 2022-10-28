@@ -102,4 +102,4 @@ def test_valid_transaction_is_successfully_commited(valid_credentials, setup):
             conn.cursor.execute(query)
             dataset = conn.cursor.fetchone()
             # then
-            assert dataset[1:5] == ('duzy pokoj', Decimal('26.1'), 1015, Decimal('73.5'))
+            assert dataset[1:5] == ['duzy pokoj', Decimal('26.1'), 1015, Decimal('73.5')]

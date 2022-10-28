@@ -1,7 +1,7 @@
 from database.postgresdriver import pgDriver
 
 
-class Query():
+class Query(object):
     def __init__(self, pgdriver: pgDriver, schema: str):
         self._pgd = pgdriver
         self._schema = schema
@@ -51,14 +51,14 @@ class Query():
         """
         return self.execute(query)
 
-    def get_latest_home_measures(self):
+    def get_latest(self, table: str) -> list:
         query = f"""
             WITH base_query AS (
                 SELECT
                     ROW_NUMBER() OVER (PARTITION BY room ORDER BY ts_id desc) AS "latest",
                     *
                 FROM 
-                    {self._schema}.home_measures hm
+                    {self._schema}.{table}
                 ORDER BY 
                     latest ASC,
                     room ASC
@@ -66,26 +66,64 @@ class Query():
             )
 
             SELECT 
-                ts_id, room, temperature, pressure, humidity
+                *
             FROM base_query
-            WHERE latest = 1
+            WHERE latest = 1 AND ts_id >= now() - '90 seconds'::interval
             ORDER BY 
                 latest ASC,
                 room ASC
         """
         return self.execute(query)
 
-    def insert_sensor_data(self, table: str, data: dict[dict]):
+    def insert_sensor_data(self, data: tuple[dict]):
         """
         Inserts rows into provided table.
-        data format-> {row: {column1: value, column2: value, columnN: value}}
+        data format-> {table: {column1: value, column2: value, columnN: value}}
         """
-        query = f"""
-            INSERT INTO {self._schema}.{table} 
-            ({','.join(str(k) for k in data[1].keys())}) VALUES 
-            """
-        for row in data.values():
-            query = query + f"({','.join(str(v) for v in row.values())}),"
-        with self._pgd as pgdb:
-            pgdb.cursor.execute(query[:-1])
-            pgdb.connection.commit()
+        for row in data:
+            table_name = next(iter(row))
+            query = f"""
+                INSERT INTO {self._schema}.{table_name}
+                ({','.join(str(k).lower() for k in row[table_name].keys())}) VALUES 
+                """
+            for columns in row.values():
+                query = query + f"({','.join(str(v) for v in columns.values())}),"
+            with self._pgd as pgdb:
+                pgdb.cursor.execute(query[:-1])
+                pgdb.connection.commit()
+    
+    def get_pressure_trend(self):
+        query = f"SELECT pressure_trend, room FROM {self._schema}.pressure_trend"
+        return self.execute(query)
+
+    def get_transformed_latest(self, required_tables: tuple[str]) -> dict:
+        """
+        Returns a dict with data mapped by rooms. Each room is a separate key,
+        values are another gict with column names and values.
+        """
+        return self._transform_queryset(self._get_data(required_tables))
+
+    def _transform_queryset(self, datasets: tuple):
+        transformed_dataset = {}
+        for dataset in datasets:
+            for row in dataset:
+                if row['room'] not in transformed_dataset.keys():
+                    transformed_dataset[row['room']] = {}
+                transformed_dataset[row['room']].update(
+                    {
+                        str(k).lower(): str(v)
+                        for k, v
+                        in row.items()
+                        if k not in ['ts_id', 'room', 'insert_ts', 'latest'] \
+                        and v is not None
+                    }
+                )
+        return transformed_dataset
+
+    def _get_data(self, required_tables: list[str]) -> tuple[list]:
+        return tuple(
+                self.get_latest(x)
+                for x
+                in required_tables
+            )
+        

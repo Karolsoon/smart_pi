@@ -1,4 +1,5 @@
 import psycopg2
+from psycopg2 import extras
 
 from database import credentials
 
@@ -38,7 +39,7 @@ class pgDriver(object):
         )
 
     def _get_cursor(self):
-        self.cursor = self.connection.cursor()
+        self.cursor = self.connection.cursor(cursor_factory=extras.DictCursor)
 
     def __exit__(self, exception, value, trace):
         if exception or value or trace:
