@@ -27,17 +27,29 @@ class DataQueue:
 
 
 class DBController(threading.Thread):
-    
+
     querymaker = Query(pgDriver, 'home')
-    
+
     def run(self):
-        pass
+        if DataQueue.read_queue.empty():
+            dataset, pressure_trend = self.get_lcd_dataset()
+            self.send_lcd_dataset(dataset, pressure_trend)
+        if DataQueue.create_queue.qsize() > 0:
+            self.querymaker.insert_sensor_data(
+                (DataQueue.create_queue.get(),)
+            )
+        sleep(1)
 
     def get_lcd_dataset(self):
-        pass
+        dataset = self.querymaker.get_transformed_latest(
+            LCDController().get_tables()
+        )
+        pressure_trend = self.querymaker.get_pressure_trend()
+        return dataset, pressure_trend
+        
 
-    def send_to_lcd(self, dataset: list) -> None:
-        pass
+    def send_lcd_dataset(self, dataset: list, pressure_trend: tuple[list]) -> None:
+        DataQueue.read_queue.put_nowait((dataset, pressure_trend))
 
 
 class LCDController(threading.Thread):
@@ -45,7 +57,6 @@ class LCDController(threading.Thread):
     CHANGE THE lcd_stub BEROFE MIGRATING TO RASPBERRY`
     """
     printer = LCDPrinter(GPIO_LCD)
-    querymaker = Query(pgDriver, 'home')
     mode = HomeMode4x20
 
     def run(self):
@@ -54,12 +65,10 @@ class LCDController(threading.Thread):
         self.startup()
 
         while LCD_CONTROLLER_THREAD_STATUS == RUNNING:
-            most_recent_data_by_rooms = self.querymaker.get_transformed_latest(
-                                                self.mode.get_required_tables()
-            )
+            most_recent_data_by_rooms, pressure_trend = DataQueue.read_queue.get()
             lines = self.mode.build_lines(
                 most_recent_data_by_rooms,
-                self.querymaker.get_pressure_trend)
+                pressure_trend)
             self.printer.set_lines(lines)
             sleep(15)
 
@@ -71,6 +80,9 @@ class LCDController(threading.Thread):
             3: ' ' * 20,
             4: ' ' * 20
         })
+
+    def get_tables(self):
+        return self.mode.get_required_tables()
 
 
 def get_ts_id():

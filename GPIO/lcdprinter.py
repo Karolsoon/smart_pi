@@ -72,15 +72,31 @@ class HomeMode4x20:
         4: '                    '
     }
 
-    def get_required_tables(self):
+    def get_required_tables(self) -> tuple[str]:
         return ('home_measures', 'illuminance')
 
     def build_lines(self, dataset: dict[dict], pressure_trend: str):
         date = datetime.date.today().isoformat().split('-')
         date_formatted = f'{date[2]}.{date[1]}.{date[0]}'
+        self.set_formatting(dataset)
         return {
             1: f"{date_formatted} {dataset['duzy pokoj']['pressure']}hPa {self.arrows[pressure_trend]}",
-            2: f"DP:{dataset['duzy pokoj']['temperature']}C  {dataset['duzy pokoj']['illuminance']}lx {dataset['duzy pokoj']['humidity'][:2]}%",
-            3: f"DZ:{dataset['pokoj dziewczyn']['temperature']}C  TP:{dataset['trzeci pokoj']['temperature']}C",
+            2: f"DP:{dataset['duzy pokoj']['temperature']}C {dataset['duzy pokoj']['illuminance']}lx {dataset['duzy pokoj']['humidity']}%",
+            3: f"DZ:{dataset['pokoj dziewczyn']['temperature']}C    TP:{dataset['trzeci pokoj']['temperature']}C",
             4: ' ' * 20
         }
+
+    def set_formatting(self, dataset: dict):
+        if len(dataset['duzy pokoj']['pressure']) == 3:
+            dataset['duzy pokoj']['pressure'] = ' ' + dataset['duzy pokoj']['pressure']
+
+        dataset['duzy pokoj']['illuminance'] = (
+            ' '
+            * (3 - len(dataset['duzy pokoj']['illuminance']))
+            + dataset['duzy pokoj']['illuminance']
+        )
+
+        dataset['duzy pokoj']['temperature'] = dataset['duzy pokoj']['temperature'][:-1]
+        dataset['pokoj dziewczyn']['temperature'] = dataset['pokoj dziewczyn']['temperature'][:-1]
+        dataset['trzeci pokoj']['temperature'] = dataset['trzeci pokoj']['temperature'][:-1]
+

@@ -106,8 +106,8 @@ def test_build_lines_returns_dict(querymaker):
     date = datetime.date.today().isoformat().split('-')
     date_formatted = f'{date[2]}.{date[1]}.{date[0]}'
     assert lines == {
-        1: f'{date_formatted} 990hPa ↑',
-        2: 'DP:26.10C  100lx 75%',
-        3: 'DZ:27.10C  TP:28.10C',
+        1: f'{date_formatted}  990hPa ↑',
+        2: 'DP:26.1C  99lx 75.1%',
+        3: 'DZ:27.1C    TP:28.1C',
         4: '                    '
     }

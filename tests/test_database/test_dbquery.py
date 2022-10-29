@@ -62,7 +62,7 @@ def setup():
 
                 INSERT INTO test_smart_home.illuminance 
                 (ts_id, room, illuminance, insert_ts) VALUES
-                (now(), 'duzy pokoj', 100, now()),
+                (now(), 'duzy pokoj', 99, now()),
                 (now(), 'trzeci pokoj', 100, now()),
                 (now() - '1 second'::interval, 'duzy pokoj', 999, now()),
                 (now() - '91 seconds'::interval, 'duzy pokoj', 999, now());
@@ -172,7 +172,7 @@ def test_get_illuminance_returns_most_recent(querymaker):
     datasets = querymaker.get_latest('illuminance')
     # Most recent dataset for room1
     assert datasets[0][1].replace(tzinfo=None) <= datetime.now() + timedelta(seconds=90)
-    assert datasets[0][2:4] == ['duzy pokoj', 100]
+    assert datasets[0][2:4] == ['duzy pokoj', 99]
 
     # Most recent dataset for room 2
     assert datasets[1][1].replace(tzinfo=None) <= datetime.now() + timedelta(seconds=90)
@@ -274,7 +274,7 @@ def test_transformes_queryset_is_grouped_by_rooms(querymaker):
 def test_transformed_queryset_is_complete(querymaker):
     expected_dataset = {
         'aaa home_measures': {
-            'humidity': '99.0', 
+            'humidity': '99.0',
             'pressure': '9999',
             'temperature': '99.90'
         },
@@ -283,7 +283,7 @@ def test_transformed_queryset_is_complete(querymaker):
         },
         'duzy pokoj': {
             'humidity': '99.0',
-            'illuminance': '100',
+            'illuminance': '99',
             'pressure': '9999',
             'temperature': '99.90'
         },

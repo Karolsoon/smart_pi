@@ -92,7 +92,7 @@ class Query(object):
                 pgdb.cursor.execute(query[:-1])
                 pgdb.connection.commit()
     
-    def get_pressure_trend(self):
+    def get_pressure_trend(self) -> tuple[list]:
         query = f"SELECT pressure_trend, room FROM {self._schema}.pressure_trend"
         return self.execute(query)
 
