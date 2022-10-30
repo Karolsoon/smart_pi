@@ -8,7 +8,7 @@ class Query(object):
         self.query = ''
 
     def execute(self, query):
-        with self._pgd as pgdb:
+        with self._pgd() as pgdb:
             pgdb.cursor.execute(query)
             return tuple(pgdb.cursor.fetchall())
 
@@ -88,28 +88,48 @@ class Query(object):
                 """
             for columns in row.values():
                 query = query + f"({','.join(str(v) for v in columns.values())}),"
-            with self._pgd as pgdb:
+            with self._pgd() as pgdb:
                 pgdb.cursor.execute(query[:-1])
                 pgdb.connection.commit()
     
     def get_pressure_trend(self) -> tuple[list]:
         query = f"SELECT pressure_trend, room FROM {self._schema}.pressure_trend"
-        return self.execute(query)
+        try:
+            pressure_trend = self.execute(query)
+            return pressure_trend[0][0]
+        except IndexError:
+            return 'CONSTANT'
 
-    def get_transformed_latest(self, required_tables: tuple[str]) -> dict:
+    def get_transformed_latest(self, required_tables: tuple[str],
+            template: dict[dict]) -> dict:
         """
         Returns a dict with data mapped by rooms. Each room is a separate key,
         values are another gict with column names and values.
         """
-        return self._transform_queryset(self._get_data(required_tables))
+        return self._transform_queryset(
+            datasets=self._get_data(required_tables),
+            template= {
+                'duzy pokoj': {
+                    'temperature': '--.--',
+                    'pressure': '----',
+                    'illuminance': '---',
+                    'humidity': '--.-'
+                },
+                'trzeci pokoj': {
+                    'temperature': '--.--',
+                    'pressure': '----'
+                },
+                'pokoj dziewczyn': {
+                    'temperature': '--.--'
+                }
+            }
+        )
 
-    def _transform_queryset(self, datasets: tuple):
-        transformed_dataset = {}
+    def _transform_queryset(self, datasets: tuple, template: dict[dict]) -> dict:
+        transformed_dataset = template
         for dataset in datasets:
             for row in dataset:
-                if row['room'] not in transformed_dataset.keys():
-                    transformed_dataset[row['room']] = {}
-                transformed_dataset[row['room']].update(
+                transformed_dataset[row['room'].lower()].update(
                     {
                         str(k).lower(): str(v)
                         for k, v

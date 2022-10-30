@@ -7,6 +7,7 @@ import pytest
 
 from tests.test_database.stub.postgresdriver_stub import pgDriverStub
 from database.dbquery import Query
+from GPIO.lcdprinter import HomeMode4x20
 
 
 EXCLUDED_SCHEMAS = """'pg_catalog', 'information_schema', 'pg_toast'"""
@@ -297,7 +298,8 @@ def test_transformed_queryset_is_complete(querymaker):
         }
     }
     transformed_dataset = querymaker.get_transformed_latest(
-        ('home_measures','illuminance')
+        ('home_measures','illuminance'),
+        HomeMode4x20.template
         )
     assert transformed_dataset == expected_dataset
 

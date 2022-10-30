@@ -1,15 +1,15 @@
 import datetime
 
-#from RPi_GPIO_i2c_LCD import lcd as GPIO_LCD
+from RPi_GPIO_i2c_LCD import lcd as GPIO_LCD
 
 
-class LCDPrinter:
+class LCDPrinter():
 
     LINE_LENGTH = 20
     LINE_QUANTITY = 4
     _lines = {k + 1: ' ' * 20 for k in range(4)}
 
-    def __init__(self, lcd) -> None:
+    def __init__(self, lcd: GPIO_LCD) -> None:
         self.lcd = lcd
 
     def _validate_new_lines(self, new_lines: dict) -> None:
@@ -33,7 +33,7 @@ class LCDPrinter:
         for line_number, line in new_lines.items():
             if len(line) > self.LINE_LENGTH:
                 raise ValueError(
-                    f'Line {line_number} exceeds {self.LINE_LENGTH} characters. Is {len(line)}.'
+                    f'Line {line_number} exceeds {self.LINE_LENGTH} characters. Is {len(line)}, "{new_lines[2]}".'
                 )
 
     def clear(self) -> None:
@@ -64,12 +64,27 @@ class LCDPrinter:
 
 class HomeMode4x20:
     arrows = {'UP': '↑', 'DOWN': '↓', 'CONSTANT': '-', 'both': '⇅'}
-    template = {
+    preview = {
         #   12345678901234567890
         1: 'DD.MM.YYYY xxxxhPa ↑',
         2: 'DP:xx.xC xxxLX xx.x%',
         3: 'DZ:xx.xC    TP:xx.xC',
         4: '                    '
+    }
+    template = {
+        'duzy pokoj': {
+            'temperature': '--.--',
+            'pressure': '----',
+            'illuminance': '---',
+            'humidity': '--.-'
+        },
+        'trzeci pokoj': {
+            'temperature': '--.--',
+            'pressure': '--.--'
+        },
+        'pokoj dziewczyn': {
+            'temperature': '--.--'
+        }
     }
 
     def get_required_tables(self) -> tuple[str]:
@@ -78,9 +93,10 @@ class HomeMode4x20:
     def build_lines(self, dataset: dict[dict], pressure_trend: str):
         date = datetime.date.today().isoformat().split('-')
         date_formatted = f'{date[2]}.{date[1]}.{date[0]}'
+        trend = self.arrows[pressure_trend]
         self.set_formatting(dataset)
         return {
-            1: f"{date_formatted} {dataset['duzy pokoj']['pressure']}hPa {self.arrows[pressure_trend]}",
+            1: f"{date_formatted} {dataset['duzy pokoj']['pressure']}hPa {trend}",
             2: f"DP:{dataset['duzy pokoj']['temperature']}C {dataset['duzy pokoj']['illuminance']}lx {dataset['duzy pokoj']['humidity']}%",
             3: f"DZ:{dataset['pokoj dziewczyn']['temperature']}C    TP:{dataset['trzeci pokoj']['temperature']}C",
             4: ' ' * 20
@@ -90,13 +106,13 @@ class HomeMode4x20:
         if len(dataset['duzy pokoj']['pressure']) == 3:
             dataset['duzy pokoj']['pressure'] = ' ' + dataset['duzy pokoj']['pressure']
 
+        # TECHNICAL DEBT
         dataset['duzy pokoj']['illuminance'] = (
             ' '
-            * (3 - len(dataset['duzy pokoj']['illuminance']))
-            + dataset['duzy pokoj']['illuminance']
+            * (3 - len(dataset['duzy pokoj']['illuminance'].split('.')[0]))
+            + dataset['duzy pokoj']['illuminance'].split('.')[0]
         )
-
+        # END?
         dataset['duzy pokoj']['temperature'] = dataset['duzy pokoj']['temperature'][:-1]
         dataset['pokoj dziewczyn']['temperature'] = dataset['pokoj dziewczyn']['temperature'][:-1]
         dataset['trzeci pokoj']['temperature'] = dataset['trzeci pokoj']['temperature'][:-1]
-

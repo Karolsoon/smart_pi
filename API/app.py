@@ -5,15 +5,17 @@ from time import sleep
 from dataclasses import dataclass
 from pytz import timezone
 
-
-#from RPi_GPIO_i2c_LCD import lcd as GPIO_LCD
-from tests.test_GPIO.stub import lcd_stub as GPIO_LCD
+from flask import Flask
+from RPi_GPIO_i2c_LCD import lcd as GPIO_LCD
+#from tests.test_GPIO.stub import lcd_stub as GPIO_LCD
 
 from GPIO.lcdprinter import LCDPrinter, HomeMode4x20
 from GPIO.bmp280_zero import BMP280_zero
 from database.dbquery import Query
 from database.postgresdriver import pgDriver
 
+
+app = Flask(__name__)
 RUNNING = 1
 STOPPED = 0
 
@@ -22,8 +24,8 @@ LCD_CONTROLLER_THREAD_STATUS = -1
 
 @dataclass
 class DataQueue:
-    create_queue: queue.Queue(maxsize=0)
-    read_queue: queue.Queue(maxsize=0)
+    create_queue: queue.Queue = queue.Queue(maxsize=0)
+    read_queue: queue.Queue = queue.Queue(maxsize=0)
 
 
 class DBController(threading.Thread):
@@ -31,22 +33,23 @@ class DBController(threading.Thread):
     querymaker = Query(pgDriver, 'home')
 
     def run(self):
-        if DataQueue.read_queue.empty():
-            dataset, pressure_trend = self.get_lcd_dataset()
-            self.send_lcd_dataset(dataset, pressure_trend)
-        if DataQueue.create_queue.qsize() > 0:
-            self.querymaker.insert_sensor_data(
-                (DataQueue.create_queue.get(),)
-            )
-        sleep(1)
+        while True:
+            if DataQueue.read_queue.empty():
+                dataset, pressure_trend = self.get_lcd_dataset()
+                self.send_lcd_dataset(dataset, pressure_trend)
+            if DataQueue.create_queue.qsize() > 0:
+                self.querymaker.insert_sensor_data(
+                    (DataQueue.create_queue.get(),)
+                )
+            sleep(2)
 
     def get_lcd_dataset(self):
         dataset = self.querymaker.get_transformed_latest(
-            LCDController().get_tables()
+            LCDController().get_tables(),
+            LCDController().get_template()
         )
         pressure_trend = self.querymaker.get_pressure_trend()
-        return dataset, pressure_trend
-        
+        return (dataset, pressure_trend)
 
     def send_lcd_dataset(self, dataset: list, pressure_trend: tuple[list]) -> None:
         DataQueue.read_queue.put_nowait((dataset, pressure_trend))
@@ -56,8 +59,8 @@ class LCDController(threading.Thread):
     """
     CHANGE THE lcd_stub BEROFE MIGRATING TO RASPBERRY`
     """
-    printer = LCDPrinter(GPIO_LCD)
-    mode = HomeMode4x20
+    printer = LCDPrinter(GPIO_LCD.HD44780(0x27))
+    mode = HomeMode4x20()
 
     def run(self):
         global LCD_CONTROLLER_THREAD_STATUS
@@ -84,34 +87,52 @@ class LCDController(threading.Thread):
     def get_tables(self):
         return self.mode.get_required_tables()
 
+    @classmethod
+    def get_template(cls):
+        return cls.mode.template
+
 
 def get_ts_id():
-    return datetime.datetime.now().astimezone(timezone('Europe/Berlin'))
+    return f"'{datetime.datetime.now().astimezone(timezone('Europe/Berlin'))}'"
 
 
-#@app.route("/duzy_pokoj/<temperature>/<humidity>/<pressure>", methods=['GET'])
-def duzy_pokoj(temperature, humidity, pressure):
+@app.route("/duzy_pokoj/<temperature>", methods=['GET'])
+def duzy_pokoj(temperature):
     DataQueue.create_queue.put_nowait(
         {
             'home_measures': {
                 'ts_id': get_ts_id(),
-                'room': 'duzy pokoj',
-                'temperature': temperature,
-                'humidity': humidity,
-                'pressure': pressure
+                'room': '\'duzy pokoj\'',
+                'temperature': temperature
             }
         },
     )
     return 'OK'
 
 
-#@app.route("/duzy_pokoj/luxmeter/<illuminance>", methods=['GET'])
+# @app.route("/duzy_pokoj/<temperature>/<humidity>/<pressure>", methods=['GET'])
+# def duzy_pokoj(temperature, humidity, pressure):
+#     DataQueue.create_queue.put_nowait(
+#         {
+#             'home_measures': {
+#                 'ts_id': get_ts_id(),
+#                 'room': '\'duzy pokoj\'',
+#                 'temperature': temperature,
+#                 'humidity': humidity,
+#                 'pressure': pressure
+#             }
+#         },
+#     )
+#     return 'OK'
+
+
+@app.route("/duzy_pokoj/luxmeter/<illuminance>", methods=['GET'])
 def duzy_pokoj_luxmeter(illuminance):
     DataQueue.create_queue.put_nowait(
         {
             'illuminance': {
                 'ts_id': get_ts_id(),
-                'room': 'duzy pokoj',
+                'room': '\'duzy pokoj\'',
                 'illuminance': illuminance
             }
         }
@@ -119,13 +140,13 @@ def duzy_pokoj_luxmeter(illuminance):
     return 'OK'
 
 
-#@app.route("/pokoj_dziewczyn/temperature/<data>", methods=['GET'])
+@app.route("/pokoj_dziewczyn/temperature/<data>", methods=['GET'])
 def pokoj_dziewczyn(data):
     DataQueue.create_queue.put_nowait(
         {
             'home_measures': {
                 'ts_id': get_ts_id(),
-                'room': 'pokoj dziewczyn',
+                'room': '\'pokoj dziewczyn\'',
                 'temperature': data
             }
         }
@@ -133,10 +154,11 @@ def pokoj_dziewczyn(data):
     return 'OK'
 
 
-#@app.route("/threads", methods=['GET'])
+@app.route("/threads", methods=['GET'])
 def threads():
     return str([x.getName() for x in threading.enumerate()])
 
 
-if __name__ == '__main__':
-    pass
+if __name__ == 'app':
+    LCDController().start()
+    DBController().start()
