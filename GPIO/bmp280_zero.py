@@ -1,9 +1,8 @@
 from math import sin
 
-#from bmp280 import BMP280
+from bmp280 import BMP280
 
-#class BMP280_zero(BMP280):
-class BMP280_zero():
+class BMP280_zero(BMP280):
     """
     Geographical data about my location and constants for pressure calculation
     """
@@ -12,12 +11,12 @@ class BMP280_zero():
     gas_constant = 8.31446261815324
     air_molar_mass = 0.0289644
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
     def get_sea_level_pressure(self, pressure, temperature_c):
         # return self.__convert_to_sea_level(
-        #     self.get_pressure(), self._get_temperature()
+        #     self.get_pressure(), self.get_temperature()
         # )
         return self.__convert_to_sea_level(pressure, temperature_c)
 

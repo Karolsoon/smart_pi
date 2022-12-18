@@ -33,7 +33,7 @@ class LCDPrinter():
         for line_number, line in new_lines.items():
             if len(line) > self.LINE_LENGTH:
                 raise ValueError(
-                    f'Line {line_number} exceeds {self.LINE_LENGTH} characters. Is {len(line)}, "{new_lines[2]}".'
+                    f'Line {line_number} exceeds {self.LINE_LENGTH} characters. Is {len(line)}, "{line}".'
                 )
 
     def clear(self) -> None:
@@ -55,37 +55,64 @@ class LCDPrinter():
         return self._lines
 
     def set_lines(self, new_lines: dict):
-        self._validate_new_lines(new_lines)
+        self._validate_new_lines(self._cleanse(new_lines))
         for line_number, line in new_lines.items():
             if self._lines[line_number] != line:
                 self._lines[line_number] = line
                 self.print_on_lcd(line_number, line)
 
+    def _cleanse(self, new_lines: dict):
+        return {
+            line: value.strip()
+            for line, value
+            in new_lines.items()
+        }
+
 
 class HomeMode4x20:
-    arrows = {'UP': '↑', 'DOWN': '↓', 'CONSTANT': '-', 'both': '⇅'}
+    arrows = {
+        'UP': 'U',
+        'up': 'u',
+        'DOWN': 'D',
+        'down': 'd',
+        'CONSTANT': '-',
+        'both': '⇅'
+        }
+    parameter_string_lengths = {
+        'illuminance': 3,
+        'temperature': 4,
+        'humidity': 3,
+        'pressure': 4,
+        'pressure_history': 8
+    }
     preview = {
         #   12345678901234567890
         1: 'DD.MM.YYYY xxxxhPa ↑',
         2: 'DP:xx.xC xxxLX xx.x%',
         3: 'DZ:xx.xC    TP:xx.xC',
-        4: '                    '
+        4: 'D:-xx.xC            '
     }
-    template = {
-        'duzy pokoj': {
-            'temperature': '--.--',
-            'pressure': '----',
-            'illuminance': '---',
-            'humidity': '--.-'
-        },
-        'trzeci pokoj': {
-            'temperature': '--.--',
-            'pressure': '--.--'
-        },
-        'pokoj dziewczyn': {
-            'temperature': '--.--'
+
+    @property
+    def template(self):
+        return {
+            'duzy pokoj': {
+                'temperature': '--.--',
+                'pressure': '----',
+                'illuminance': '---',
+                'humidity': '--.-'
+            },
+            'trzeci pokoj': {
+                'temperature': '--.--',
+                'pressure': '----'
+            },
+            'pokoj dziewczyn': {
+                'temperature': '--.--'
+            },
+            'outdoors': {
+                'temperature': '---.--'
+            }
         }
-    }
 
     def get_required_tables(self) -> tuple[str]:
         return ('home_measures', 'illuminance')
@@ -93,26 +120,40 @@ class HomeMode4x20:
     def build_lines(self, dataset: dict[dict], pressure_trend: str):
         date = datetime.date.today().isoformat().split('-')
         date_formatted = f'{date[2]}.{date[1]}.{date[0]}'
-        trend = self.arrows[pressure_trend]
+        trend = self.arrows[pressure_trend.upper()]
         self.set_formatting(dataset)
         return {
-            1: f"{date_formatted} {dataset['duzy pokoj']['pressure']}hPa {trend}",
+            1: f"{date_formatted} {dataset['trzeci pokoj']['pressure']}hPa {trend}",
             2: f"DP:{dataset['duzy pokoj']['temperature']}C {dataset['duzy pokoj']['illuminance']}lx {dataset['duzy pokoj']['humidity']}%",
             3: f"DZ:{dataset['pokoj dziewczyn']['temperature']}C    TP:{dataset['trzeci pokoj']['temperature']}C",
-            4: ' ' * 20
+            4: f"D:{dataset['outdoors']['temperature']}C" + " " * 12
         }
 
-    def set_formatting(self, dataset: dict):
-        if len(dataset['duzy pokoj']['pressure']) == 3:
-            dataset['duzy pokoj']['pressure'] = ' ' + dataset['duzy pokoj']['pressure']
+    def set_formatting(self, dataset: dict[str]):
+        if len(dataset['trzeci pokoj']['pressure']) == 3:
+            dataset['trzeci pokoj']['pressure'] = ' ' + dataset['trzeci pokoj']['pressure']
 
         # TECHNICAL DEBT
-        dataset['duzy pokoj']['illuminance'] = (
+        if dataset['duzy pokoj']['illuminance'] > '999':
+            dataset['duzy pokoj']['illuminance'] = '999'
+        else:
+            if dataset['duzy pokoj']['illuminance'] == '---':
+                dataset['duzy pokoj']['illuminance'] = '---.'
+            else:
+                dataset['duzy pokoj']['illuminance'] = str(float(dataset['duzy pokoj']['illuminance']))
+            dataset['duzy pokoj']['illuminance'] = (
+                ' '
+                * (3 - len(dataset['duzy pokoj']['illuminance'].split('.')[0]))
+                + dataset['duzy pokoj']['illuminance'].split('.')[0]
+            )
+            # END?
+
+        dataset['outdoors']['temperature'] = (
             ' '
-            * (3 - len(dataset['duzy pokoj']['illuminance'].split('.')[0]))
-            + dataset['duzy pokoj']['illuminance'].split('.')[0]
-        )
-        # END?
+            * (6 - len(dataset['outdoors']['temperature']))
+            + dataset['outdoors']['temperature']
+        )[:-1]
+
         dataset['duzy pokoj']['temperature'] = dataset['duzy pokoj']['temperature'][:-1]
         dataset['pokoj dziewczyn']['temperature'] = dataset['pokoj dziewczyn']['temperature'][:-1]
         dataset['trzeci pokoj']['temperature'] = dataset['trzeci pokoj']['temperature'][:-1]

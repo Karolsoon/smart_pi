@@ -96,7 +96,7 @@ class Query(object):
         query = f"SELECT pressure_trend, room FROM {self._schema}.pressure_trend"
         try:
             pressure_trend = self.execute(query)
-            return pressure_trend[0][0]
+            return pressure_trend[0][0] if pressure_trend[0][0] else 'CONSTANT'
         except IndexError:
             return 'CONSTANT'
 
@@ -104,29 +104,16 @@ class Query(object):
             template: dict[dict]) -> dict:
         """
         Returns a dict with data mapped by rooms. Each room is a separate key,
-        values are another gict with column names and values.
+        values are another dict with column names and values.
         """
         return self._transform_queryset(
             datasets=self._get_data(required_tables),
-            template= {
-                'duzy pokoj': {
-                    'temperature': '--.--',
-                    'pressure': '----',
-                    'illuminance': '---',
-                    'humidity': '--.-'
-                },
-                'trzeci pokoj': {
-                    'temperature': '--.--',
-                    'pressure': '----'
-                },
-                'pokoj dziewczyn': {
-                    'temperature': '--.--'
-                }
-            }
+            template=template
         )
 
     def _transform_queryset(self, datasets: tuple, template: dict[dict]) -> dict:
-        transformed_dataset = template
+        transformed_dataset = {}
+        transformed_dataset.update(template)
         for dataset in datasets:
             for row in dataset:
                 transformed_dataset[row['room'].lower()].update(

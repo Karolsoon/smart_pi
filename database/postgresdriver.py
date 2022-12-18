@@ -42,12 +42,11 @@ class pgDriver(object):
         self.cursor = self.connection.cursor(cursor_factory=extras.DictCursor)
 
     def __exit__(self, exception, value, trace):
-        if exception or value or trace:
+        if  value:
             self.rollback_transaction()
-            return False
-        else:
-            self.commit_transaction()
             return True
+        self.commit_transaction()
+        return True
 
     def rollback_transaction(self):
         self.connection.rollback()
