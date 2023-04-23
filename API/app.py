@@ -8,11 +8,11 @@ from pytz import timezone
 from flask import Flask
 from RPi_GPIO_i2c_LCD import lcd as GPIO_LCD
 from psycopg2 import OperationalError
-from w1thermsensor import W1ThermSensor
 #from tests.test_GPIO.stub import lcd_stub as GPIO_LCD
 
 from GPIO.lcdprinter import LCDPrinter, HomeMode4x20
-from GPIO.bmp280_zero import BMP280_zero
+from GPIO.bh1750_zero import BH1750
+from GPIO.bme280_zero import BME280_zero
 from database.dbquery import Query
 from database.postgresdriver import pgDriver
 
@@ -23,6 +23,7 @@ except ImportError:
 
 
 app = Flask(__name__)
+
 RUNNING = 1
 STOPPED = 0
 
@@ -38,7 +39,7 @@ class DataQueue:
 class DBController(threading.Thread):
 
     querymaker = Query(pgDriver, 'home')
-    name: str = 'DBController'
+    name = 'DBController'
 
     def run(self):
 
@@ -80,7 +81,7 @@ class LCDController(threading.Thread):
     CHANGE THE lcd_stub BEROFE MIGRATING TO RASPBERRY`
     """
     printer = LCDPrinter(GPIO_LCD.HD44780(0x27))
-    name: str = 'LCDController'
+    name = 'LCDController'
 
     def run(self):
         global LCD_CONTROLLER_THREAD_STATUS
@@ -120,48 +121,51 @@ class LCDController(threading.Thread):
         return cls.get_mode(cls).template
 
 
-class BMP280Controller(threading.Thread):
+class BME280Controller(threading.Thread):
 
     bus = SMBus(1)
-    bmp280 = BMP280_zero(i2c_dev=bus)
-    name: str = 'BMP280Controller'
+    bme280 = BME280_zero(i2c_dev=bus)
+    name = 'BME280Controller'
 
     def run(self):
         while True:
-            temperature = self.bmp280.get_temperature()
-            pressure = self.bmp280.get_pressure()
-            sea_level_pressure = self.bmp280.get_sea_level_pressure(
+            temperature = self.bme280.get_temperature()
+            pressure = self.bme280.get_pressure()
+            humidity = self.bme280.get_humidity()
+            sea_level_pressure = self.bme280.get_sea_level_pressure(
                 pressure, temperature
             )
             DataQueue.create_queue.put_nowait(
                 {
                     'home_measures': {
                         'ts_id': get_ts_id(),
-                        'room': '\'trzeci pokoj\'',
+                        'room': '\'outdoors\'',
                         'temperature': temperature,
-                        'pressure': sea_level_pressure
+                        'pressure': sea_level_pressure,
+                        'humidity': humidity
                     }
                 }
             )
             sleep(58.5)
 
 
-class Outdoor_DS18B20(threading.Thread):
+class BH1750Controller(threading.Thread):
 
-    sensor = W1ThermSensor()
-    name = 'Outdoor_DS18B20'
+    bus = SMBus(1)
+    sensor = BH1750(bus)
+    name = 'BH1750Controller'
 
     def run(self):
         while True:
             try:
-                temperature = round(self.sensor.get_temperature(), 1)
+                illuminance = self.sensor.get_illuminance()
 
                 DataQueue.create_queue.put_nowait(
                     {
                         'home_measures': {
                             'ts_id': get_ts_id(),
                             'room': '\'outdoors\'',
-                            'temperature': temperature
+                            'illuminance': illuminance
                         }
                     }
                 )
@@ -173,8 +177,8 @@ class Outdoor_DS18B20(threading.Thread):
 
 class ThreadWatcher(threading.Thread):
     THREAD_NAMES = {
-        'Outdoor_DS18B20': Outdoor_DS18B20,
-        'BMP280Controller': BMP280Controller,
+        'BH1750Controller': BH1750Controller,
+        'BME280Controller': BME280Controller,
         'LCDController': LCDController,
         'DBController': DBController
     }
@@ -253,5 +257,5 @@ def threads():
 if __name__ == 'app':
     DBController().start()
     LCDController().start()
-    BMP280Controller().start()
-    Outdoor_DS18B20().start()
+    BME280Controller().start()
+    BH1750Controller().start()

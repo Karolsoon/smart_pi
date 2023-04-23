@@ -1,8 +1,8 @@
 from math import sin
 
-from bmp280 import BMP280
+from bme280 import BME280
 
-class BMP280_zero(BMP280):
+class BME280_zero(BME280):
     """
     Geographical data about my location and constants for pressure calculation
     """

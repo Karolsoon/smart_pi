@@ -1,6 +1,6 @@
 import pytest
 
-from GPIO.bmp280_zero import BMP280_zero
+from GPIO.bme280_zero import BMP280_zero
 #convert_to_sea_level, convert_celsius_to_kelvin
 
 
