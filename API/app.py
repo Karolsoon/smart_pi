@@ -121,11 +121,12 @@ class LCDController(threading.Thread):
         return cls.get_mode(cls).template
 
 
-class BME280Controller(threading.Thread):
+class SensorController(threading.Thread):
 
     bus = SMBus(1)
     bme280 = BME280_zero(i2c_dev=bus)
-    name = 'BME280Controller'
+    bh1750 = BH1750(bus)
+    name = 'SensorController'
 
     def run(self):
         while True:
@@ -135,6 +136,7 @@ class BME280Controller(threading.Thread):
             sea_level_pressure = self.bme280.get_sea_level_pressure(
                 pressure, temperature
             )
+            illuminance = self.bh1750.get_illuminance()
             DataQueue.create_queue.put_nowait(
                 {
                     'home_measures': {
@@ -146,39 +148,22 @@ class BME280Controller(threading.Thread):
                     }
                 }
             )
-            sleep(58.5)
 
-
-class BH1750Controller(threading.Thread):
-
-    bus = SMBus(1)
-    sensor = BH1750(bus)
-    name = 'BH1750Controller'
-
-    def run(self):
-        while True:
-            try:
-                illuminance = self.sensor.get_illuminance()
-
-                DataQueue.create_queue.put_nowait(
-                    {
-                        'home_measures': {
-                            'ts_id': get_ts_id(),
-                            'room': '\'outdoors\'',
-                            'illuminance': illuminance
-                        }
+            DataQueue.create_queue.put_nowait(
+                {
+                    'home_measures': {
+                        'ts_id': get_ts_id(),
+                        'room': '\'outdoors\'',
+                        'illuminance': illuminance
                     }
-                )
-            except Exception:
-                pass
-            finally:
-                sleep(58.5)
+                }
+            )
+            sleep(58.5)
 
 
 class ThreadWatcher(threading.Thread):
     THREAD_NAMES = {
-        'BH1750Controller': BH1750Controller,
-        'BME280Controller': BME280Controller,
+        'SensorController': SensorController,
         'LCDController': LCDController,
         'DBController': DBController
     }
@@ -186,7 +171,7 @@ class ThreadWatcher(threading.Thread):
     def run(self):
         while True:
             self.revive_dead_threads()
-            sleep(300)
+            sleep(60)
 
     def revive_dead_threads(self):
         alive_threads = tuple(threading.enumerate())
@@ -257,5 +242,4 @@ def threads():
 if __name__ == 'app':
     DBController().start()
     LCDController().start()
-    BME280Controller().start()
-    BH1750Controller().start()
+    SensorController().start()
