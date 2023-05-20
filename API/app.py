@@ -191,16 +191,15 @@ def get_ts_id():
     return f"'{datetime.datetime.now().astimezone(timezone('Europe/Berlin'))}'"
 
 
-@app.route("/duzy_pokoj/<temperature>/<humidity>/<pressure>", methods=['GET'])
-def duzy_pokoj(temperature, humidity, pressure):
+@app.route("/duzy_pokoj/<temperature>/<humidity>", methods=['GET'])
+def duzy_pokoj(temperature, humidity):
     DataQueue.create_queue.put_nowait(
         {
             'home_measures': {
                 'ts_id': get_ts_id(),
                 'room': '\'duzy pokoj\'',
                 'temperature': temperature,
-                'humidity': humidity,
-                'pressure': pressure
+                'humidity': humidity
             }
         }
     )

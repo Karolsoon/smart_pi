@@ -177,10 +177,10 @@ class EnchancedOutdoor4x20:
     }
     preview = {
         #    12345678901234567890
-        1: r'DD.MM.YYYY xxxxhPa ↑',
+        1: r'DD.MM.YYYY ↑ xxxxhPa',
         2: r'DP: xx.xC  |  -xx.xC',
         3: r'    xx.x%  |   xx.x%',
-        4: r'DZ:-xx.xC  |  xxx lx'
+        4: r'DZ:-xx.xC  | xxxx lx'
     }
 
     @property
@@ -197,7 +197,7 @@ class EnchancedOutdoor4x20:
                 'temperature': '---.--',
                 'pressure': '----',
                 'humidity': '--.-',
-                'illuminance': '---'
+                'illuminance': '----'
             }
         }
 
@@ -210,10 +210,10 @@ class EnchancedOutdoor4x20:
         trend = self.arrows[pressure_trend]
         self.set_formatting(dataset)
         return {
-            1: f"{date_formatted} {dataset['outdoors']['pressure']}hPa {trend}",
-            2: f"DP: {dataset['duzy pokoj']['temperature']}C  |  {dataset['outdoors']['temperature']}C",
+            1: f"{date_formatted} {trend} {dataset['outdoors']['pressure']}hPa",
+            2: f"DP: {dataset['duzy pokoj']['temperature']}C  |  {dataset['outdoors']['temperature']} C",
             3: f"    {dataset['duzy pokoj']['humidity']}C  |  {dataset['outdoors']['humidity']} %",
-            4: f"DZ: {dataset['pokoj dziewczyn']['temperature']}C  |  {dataset['outdoors']['illuminance']} lx"
+            4: f"DZ: {dataset['pokoj dziewczyn']['temperature']}C  | {dataset['outdoors']['illuminance']} lx"
         }
 
     def set_formatting(self, dataset: dict[str]):
@@ -221,15 +221,15 @@ class EnchancedOutdoor4x20:
             dataset['outdoors']['pressure'] = ' ' + dataset['outdoors']['pressure']
 
         # TECHNICAL DEBT
-        if dataset['outdoors']['illuminance'] == '---':
-            dataset['outdoors']['illuminance'] = '---.'
-        elif float(dataset['outdoors']['illuminance']) > 999:
-            dataset['outdoors']['illuminance'] = '999'
+        if dataset['outdoors']['illuminance'] == '----':
+            dataset['outdoors']['illuminance'] = '----.'
+        elif float(dataset['outdoors']['illuminance']) > 9999:
+            dataset['outdoors']['illuminance'] = '9999'
         else:
             dataset['outdoors']['illuminance'] = str(float(dataset['outdoors']['illuminance']))
         dataset['outdoors']['illuminance'] = (
             ' '
-            * (3 - len(dataset['outdoors']['illuminance'].split('.')[0]))
+            * (4 - len(dataset['outdoors']['illuminance'].split('.')[0]))
             + dataset['outdoors']['illuminance'].split('.')[0]
         )
             # END?
