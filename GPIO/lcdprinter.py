@@ -176,7 +176,7 @@ class EnchancedOutdoor4x20:
         'pressure_history': 8
     }
     preview = {
-        #   12345678901234567890
+        #    12345678901234567890
         1: r'DD.MM.YYYY xxxxhPa ↑',
         2: r'DP: xx.xC  |  -xx.xC',
         3: r'    xx.x%  |   xx.x%',
@@ -212,7 +212,7 @@ class EnchancedOutdoor4x20:
         return {
             1: f"{date_formatted} {dataset['outdoors']['pressure']}hPa {trend}",
             2: f"DP: {dataset['duzy pokoj']['temperature']}C  |  {dataset['outdoors']['temperature']}C",
-            3: f"    {dataset['duzy pokoj']['humidity']}C  |  {dataset['outdoors']['humidity']}%",
+            3: f"    {dataset['duzy pokoj']['humidity']}C  |  {dataset['outdoors']['humidity']} %",
             4: f"DZ: {dataset['pokoj dziewczyn']['temperature']}C  |  {dataset['outdoors']['illuminance']} lx"
         }
 
@@ -221,23 +221,22 @@ class EnchancedOutdoor4x20:
             dataset['outdoors']['pressure'] = ' ' + dataset['outdoors']['pressure']
 
         # TECHNICAL DEBT
-        if dataset['outdoors']['illuminance'] > '999':
+        if dataset['outdoors']['illuminance'] == '---':
+            dataset['outdoors']['illuminance'] = '---.'
+        elif float(dataset['outdoors']['illuminance']) > 999:
             dataset['outdoors']['illuminance'] = '999'
         else:
-            if dataset['outdoors']['illuminance'] == '---':
-                dataset['outdoors']['illuminance'] = '---.'
-            else:
-                dataset['outdoors']['illuminance'] = str(float(dataset['outdoors']['illuminance']))
-            dataset['outdoors']['illuminance'] = (
-                ' '
-                * (3 - len(dataset['outdoors']['illuminance'].split('.')[0]))
-                + dataset['outdoors']['illuminance'].split('.')[0]
-            )
+            dataset['outdoors']['illuminance'] = str(float(dataset['outdoors']['illuminance']))
+        dataset['outdoors']['illuminance'] = (
+            ' '
+            * (3 - len(dataset['outdoors']['illuminance'].split('.')[0]))
+            + dataset['outdoors']['illuminance'].split('.')[0]
+        )
             # END?
 
         dataset['outdoors']['temperature'] = (
             ' '
-            * (6 - len(dataset['outdoors']['temperature'][:-1]))
+            * (5 - len(dataset['outdoors']['temperature'][:-1]))
             + dataset['outdoors']['temperature']
         )[:-1]
 

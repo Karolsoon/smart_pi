@@ -53,22 +53,23 @@ class Query(object):
 
     def get_latest(self, table: str) -> list:
         query = f"""
-            WITH base_query AS (
+WITH base_query AS (
                 SELECT
                     ROW_NUMBER() OVER (PARTITION BY room ORDER BY ts_id desc) AS "latest",
                     *
                 FROM 
                     {self._schema}.{table}
+                WHERE ts_id >= now() - '10 minutes'::interval
                 ORDER BY 
                     latest ASC,
                     room ASC
-                LIMIT 20
+                LIMIT 200
             )
 
             SELECT 
                 *
             FROM base_query
-            WHERE latest = 1 AND ts_id >= now() - '90 seconds'::interval
+            WHERE latest = 1
             ORDER BY 
                 latest ASC,
                 room ASC
@@ -91,6 +92,7 @@ class Query(object):
             with self._pgd() as pgdb:
                 pgdb.cursor.execute(query[:-1])
                 pgdb.connection.commit()
+                print(query)
     
     def get_pressure_trend(self) -> tuple[list]:
         query = f"SELECT pressure_trend, room FROM {self._schema}.pressure_trend"

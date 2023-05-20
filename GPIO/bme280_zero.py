@@ -4,7 +4,7 @@ import bme280
 
 class BME280_zero:
 
-    address = 0x77
+    address = 0x76
 
     """
     Geographical data about my location and constants for pressure calculation

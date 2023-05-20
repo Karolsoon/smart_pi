@@ -56,7 +56,7 @@ class DBController(threading.Thread):
                     self.querymaker.insert_sensor_data(
                         (post_data,)
                     )
-                sleep(2)
+                sleep(15)
             except OperationalError as exc:
                 if post_data:
                     DataQueue.create_queue.put_nowait(post_data)
@@ -76,6 +76,7 @@ class DBController(threading.Thread):
 
     def send_lcd_dataset(self, dataset: list, pressure_trend: tuple[list]) -> None:
         DataQueue.read_queue.put_nowait((dataset, pressure_trend))
+        print(dataset)
 
 
 class LCDController(threading.Thread):
@@ -151,14 +152,14 @@ class SensorController(threading.Thread):
 
             DataQueue.create_queue.put_nowait(
                 {
-                    'home_measures': {
+                    'illuminance': {
                         'ts_id': get_ts_id(),
                         'room': '\'outdoors\'',
                         'illuminance': illuminance
                     }
                 }
             )
-            sleep(58.5)
+            sleep(60)
 
 
 class ThreadWatcher(threading.Thread):
