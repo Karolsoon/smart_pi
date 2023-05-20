@@ -157,3 +157,89 @@ class HomeMode4x20:
         dataset['duzy pokoj']['temperature'] = dataset['duzy pokoj']['temperature'][:-1]
         dataset['pokoj dziewczyn']['temperature'] = dataset['pokoj dziewczyn']['temperature'][:-1]
         dataset['trzeci pokoj']['temperature'] = dataset['trzeci pokoj']['temperature'][:-1]
+
+
+class EnchancedOutdoor4x20:
+    arrows = {
+        'UP': 'U',
+        'up': 'u',
+        'DOWN': 'D',
+        'down': 'd',
+        'CONSTANT': '-',
+        'both': '⇅'
+        }
+    parameter_string_lengths = {
+        'illuminance': 3,
+        'temperature': 4,
+        'humidity': 3,
+        'pressure': 4,
+        'pressure_history': 8
+    }
+    preview = {
+        #   12345678901234567890
+        1: r'DD.MM.YYYY xxxxhPa ↑',
+        2: r'DP: xx.xC  |  -xx.xC',
+        3: r'    xx.x%  |   xx.x%',
+        4: r'DZ:-xx.xC  |  xxx lx'
+    }
+
+    @property
+    def template(self):
+        return {
+            'duzy pokoj': {
+                'temperature': '--.--',
+                'humidity': '--.-'
+            },
+            'pokoj dziewczyn': {
+                'temperature': '--.--'
+            },
+            'outdoors': {
+                'temperature': '---.-',
+                'pressure': '----',
+                'humidity': '--.-',
+                'illuminance': '---'
+            }
+        }
+
+    def get_required_tables(self) -> tuple[str]:
+        return ('home_measures', 'illuminance')
+
+    def build_lines(self, dataset: dict[dict], pressure_trend: str):
+        date = datetime.date.today().isoformat().split('-')
+        date_formatted = f'{date[2]}.{date[1]}.{date[0]}'
+        trend = self.arrows[pressure_trend]
+        self.set_formatting(dataset)
+        return {
+            1: f"{date_formatted} {dataset['outdoors']['pressure']}hPa {trend}",
+            2: f"DP: {dataset['duzy pokoj']['temperature']}C  |  {dataset['outdoors']['temperature']}C",
+            3: f"    {dataset['duzy pokoj']['humidity']}C  |  {dataset['outdoors']['humidity']}%",
+            4: f"DZ: {dataset['pokoj dziewczyn']['temperature']}C  |  {dataset['outdoors']['illuminance']} lx"
+        }
+
+    def set_formatting(self, dataset: dict[str]):
+        if len(dataset['outdoors']['pressure']) == 3:
+            dataset['outdoors']['pressure'] = ' ' + dataset['outdoors']['pressure']
+
+        # TECHNICAL DEBT
+        if dataset['outdoors']['illuminance'] > '999':
+            dataset['outdoors']['illuminance'] = '999'
+        else:
+            if dataset['outdoors']['illuminance'] == '---':
+                dataset['outdoors']['illuminance'] = '---.'
+            else:
+                dataset['outdoors']['illuminance'] = str(float(dataset['outdoors']['illuminance']))
+            dataset['outdoors']['illuminance'] = (
+                ' '
+                * (3 - len(dataset['outdoors']['illuminance'].split('.')[0]))
+                + dataset['outdoors']['illuminance'].split('.')[0]
+            )
+            # END?
+
+        dataset['outdoors']['temperature'] = (
+            ' '
+            * (6 - len(dataset['outdoors']['temperature'][:-1]))
+            + dataset['outdoors']['temperature']
+        )[:-1]
+
+        dataset['duzy pokoj']['temperature'] = dataset['duzy pokoj']['temperature'][:-1]
+        dataset['pokoj dziewczyn']['temperature'] = dataset['pokoj dziewczyn']['temperature'][:-1]

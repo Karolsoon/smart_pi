@@ -10,7 +10,7 @@ from RPi_GPIO_i2c_LCD import lcd as GPIO_LCD
 from psycopg2 import OperationalError
 #from tests.test_GPIO.stub import lcd_stub as GPIO_LCD
 
-from GPIO.lcdprinter import LCDPrinter, HomeMode4x20
+from GPIO.lcdprinter import LCDPrinter, HomeMode4x20, EnchancedOutdoor4x20
 from GPIO.bh1750_zero import BH1750
 from GPIO.bme280_zero import BME280_zero
 from database.dbquery import Query
@@ -61,7 +61,9 @@ class DBController(threading.Thread):
                 if post_data:
                     DataQueue.create_queue.put_nowait(post_data)
                 print(exc.args)
-                sleep(20)
+                sleep(10)
+            finally:
+                post_data = None
             # END
 
     def get_lcd_dataset(self):
@@ -99,7 +101,7 @@ class LCDController(threading.Thread):
                 # END
             if lines != self.printer.get_lines():
                 self.printer.set_lines(lines)
-            sleep(15)
+            sleep(10)
 
     def startup(self):
         self.printer.set_lines({
@@ -114,7 +116,7 @@ class LCDController(threading.Thread):
         return self.get_mode().get_required_tables()
 
     def get_mode(self):
-        return HomeMode4x20()
+        return EnchancedOutdoor4x20()
 
     @classmethod
     def get_template(cls):
