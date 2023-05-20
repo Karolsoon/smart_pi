@@ -126,15 +126,13 @@ class LCDController(threading.Thread):
 class SensorController(threading.Thread):
 
     bus = SMBus(1)
-    bme280 = BME280_zero(i2c_dev=bus)
+    bme280 = BME280_zero(bus=bus)
     bh1750 = BH1750(bus)
     name = 'SensorController'
 
     def run(self):
         while True:
-            temperature = self.bme280.get_temperature()
-            pressure = self.bme280.get_pressure()
-            humidity = self.bme280.get_humidity()
+            temperature, humidity, pressure = self.bme280.get_all()
             sea_level_pressure = self.bme280.get_sea_level_pressure(
                 pressure, temperature
             )

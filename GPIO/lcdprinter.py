@@ -194,7 +194,7 @@ class EnchancedOutdoor4x20:
                 'temperature': '--.--'
             },
             'outdoors': {
-                'temperature': '---.-',
+                'temperature': '---.--',
                 'pressure': '----',
                 'humidity': '--.-',
                 'illuminance': '---'

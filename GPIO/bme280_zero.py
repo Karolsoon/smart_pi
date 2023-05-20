@@ -1,8 +1,11 @@
 from math import sin
+import bme280
 
-from bme280 import BME280
 
-class BME280_zero(BME280):
+class BME280_zero:
+
+    address = 0x77
+
     """
     Geographical data about my location and constants for pressure calculation
     """
@@ -11,8 +14,14 @@ class BME280_zero(BME280):
     gas_constant = 8.31446261815324
     air_molar_mass = 0.0289644
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, bus, bme280_driver=bme280) -> None:
+        self.bus = bus
+        self.bme280 = bme280_driver
+        self.bme280.load_calibration_params(self.bus, self.address)
+    
+    def get_all(self):
+        data = self.bme280.sample(self.bus, self.address)
+        return data.temperature, data.humidity, data.pressure
 
     def get_sea_level_pressure(self, pressure, temperature_c):
         # return self.__convert_to_sea_level(
