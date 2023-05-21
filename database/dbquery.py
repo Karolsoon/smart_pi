@@ -92,7 +92,6 @@ WITH base_query AS (
             with self._pgd() as pgdb:
                 pgdb.cursor.execute(query[:-1])
                 pgdb.connection.commit()
-                print(query)
     
     def get_pressure_trend(self) -> tuple[list]:
         query = f"SELECT pressure_trend, room FROM {self._schema}.pressure_trend"

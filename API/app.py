@@ -76,7 +76,6 @@ class DBController(threading.Thread):
 
     def send_lcd_dataset(self, dataset: list, pressure_trend: tuple[list]) -> None:
         DataQueue.read_queue.put_nowait((dataset, pressure_trend))
-        print(dataset)
 
 
 class LCDController(threading.Thread):

@@ -178,9 +178,9 @@ class EnchancedOutdoor4x20:
     preview = {
         #    12345678901234567890
         1: r'DD.MM.YYYY ↑ xxxxhPa',
-        2: r'DP: xx.xC  |  -xx.xC',
-        3: r'    xx.x%  |   xx.x%',
-        4: r'DZ:-xx.xC  | xxxx lx'
+        2: r'DP: xx.x C | -xx.x C',
+        3: r'    xx.x % |  xx.x %',
+        4: r'DZ:-xx.x C | xxxx lx'
     }
 
     @property
@@ -211,9 +211,9 @@ class EnchancedOutdoor4x20:
         self.set_formatting(dataset)
         return {
             1: f"{date_formatted} {trend} {dataset['outdoors']['pressure']}hPa",
-            2: f"DP: {dataset['duzy pokoj']['temperature']}C  |  {dataset['outdoors']['temperature']} C",
-            3: f"    {dataset['duzy pokoj']['humidity']}C  |  {dataset['outdoors']['humidity']} %",
-            4: f"DZ: {dataset['pokoj dziewczyn']['temperature']}C  | {dataset['outdoors']['illuminance']} lx"
+            2: f"DP: {dataset['duzy pokoj']['temperature']} C | {dataset['outdoors']['temperature']} C",
+            3: f"    {dataset['duzy pokoj']['humidity']} % |  {dataset['outdoors']['humidity']} %",
+            4: f"DZ: {dataset['pokoj dziewczyn']['temperature']} C | {dataset['outdoors']['illuminance']} lx"
         }
 
     def set_formatting(self, dataset: dict[str]):
