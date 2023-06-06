@@ -40,6 +40,7 @@ class DBController(threading.Thread):
 
     querymaker = Query(pgDriver, 'home')
     name = 'DBController'
+    retry_count = 0
 
     def run(self):
 
@@ -52,16 +53,20 @@ class DBController(threading.Thread):
                     dataset, pressure_trend = self.get_lcd_dataset()
                     self.send_lcd_dataset(dataset, pressure_trend)
                 if DataQueue.create_queue.qsize() > 0:
-                    post_data = DataQueue.create_queue.get()
+                    post_data = DataQueue.create_queue.get_nowait()
                     self.querymaker.insert_sensor_data(
                         (post_data,)
                     )
-                sleep(15)
-            except OperationalError as exc:
+                    self.retry_count = 0
+            except OperationalError:
                 if post_data:
                     DataQueue.create_queue.put_nowait(post_data)
-                print(exc.args)
+                    self.retry_count += 1
+                print(f'[DB][{get_ts_id()}] Database unreachable')
                 sleep(10)
+            except queue.Empty:
+                if dataset:
+                    print(f'[DB][{get_ts_id()}] create_queue is empty')
             finally:
                 post_data = None
             # END
@@ -75,7 +80,9 @@ class DBController(threading.Thread):
         return (dataset, pressure_trend)
 
     def send_lcd_dataset(self, dataset: list, pressure_trend: tuple[list]) -> None:
-        DataQueue.read_queue.put_nowait((dataset, pressure_trend))
+        print(f'[DB][{get_ts_id()}] Waiting to put item into read_queue')
+        DataQueue.read_queue.put((dataset, pressure_trend))
+        print(f'[DB][{get_ts_id()}] Put one item into queue.')
 
 
 class LCDController(threading.Thread):
@@ -91,7 +98,9 @@ class LCDController(threading.Thread):
         self.startup()
 
         while LCD_CONTROLLER_THREAD_STATUS == RUNNING:
+            print(f'[LCD][{get_ts_id()}] Waiting for item in read_queue')
             most_recent_data_by_rooms, pressure_trend = DataQueue.read_queue.get()
+            print(f'[LCD][{get_ts_id()}] Got item, start processing.')
             lines = self.get_mode().build_lines(
                 most_recent_data_by_rooms,
                 # Technical DEBT
