@@ -1,4 +1,5 @@
 from database.postgresdriver import pgDriver
+from time import sleep
 
 
 class Query(object):
@@ -8,9 +9,12 @@ class Query(object):
         self.query = ''
 
     def execute(self, query):
-        with self._pgd() as pgdb:
-            pgdb.cursor.execute(query)
-            return tuple(pgdb.cursor.fetchall())
+        try:
+            with self._pgd() as pgdb:
+                pgdb.cursor.execute(query)
+                return tuple(pgdb.cursor.fetchall())
+        except AttributeError as err:
+            raise ConnectionError('Cannot get cursor') from err
 
     def get_schemas(self, excluded: str):
         query = f"""

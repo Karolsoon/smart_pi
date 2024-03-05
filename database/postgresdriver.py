@@ -13,6 +13,7 @@ class pgDriver(object):
     USER = credentials.USER
     PASSWORD = credentials.PASSWORD
     HOST = credentials.HOST
+    #HOST2 = credentials.HOST2
     PORT = credentials.PORT
     DBNAME = 'smart_home'
 
@@ -24,13 +25,19 @@ class pgDriver(object):
         self.cursor = None
 
     def __enter__(self):
-        self._get_connection()
+        for _ in range(2):
+            try:
+                self._get_connection(self.HOST)
+            except Exception:
+                #self._get_connection(self.HOST2)
+                pass
+
         self._get_cursor()
         return self
 
-    def _get_connection(self):
+    def _get_connection(self, host):
         self.connection = psycopg2.connect(
-        host=self.HOST,
+        host=host,
         port=self.PORT,
         dbname=self.DBNAME,
         user=self.USER,
@@ -39,6 +46,8 @@ class pgDriver(object):
         )
 
     def _get_cursor(self):
+        if self.connection is None:
+            raise ConnectionError('Failed to get cursor')
         self.cursor = self.connection.cursor(cursor_factory=extras.DictCursor)
 
     def __exit__(self, exception, value, trace):
@@ -50,8 +59,10 @@ class pgDriver(object):
 
     def rollback_transaction(self):
         self.connection.rollback()
-        self.cursor.close()
-        self.connection.close()
+        if self.cursor:
+            self.cursor.close()
+        if self.connection:
+            self.connection.close()
 
     def commit_transaction(self):
         self.connection.commit()

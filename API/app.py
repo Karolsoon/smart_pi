@@ -54,19 +54,25 @@ class DBController(threading.Thread):
                     self.send_lcd_dataset(dataset, pressure_trend)
                 if DataQueue.create_queue.qsize() > 0:
                     post_data = DataQueue.create_queue.get_nowait()
-                    self.querymaker.insert_sensor_data(
-                        (post_data,)
-                    )
-                    self.retry_count = 0
+                    if post_data:
+                        self.querymaker.insert_sensor_data(
+                            (post_data,)
+                        )
+                        self.retry_count = 0
             except OperationalError:
                 if post_data:
                     DataQueue.create_queue.put_nowait(post_data)
                     self.retry_count += 1
                 print(f'[DB][{get_ts_id()}] Database unreachable')
-                sleep(10)
+                sleep(3)
             except queue.Empty:
                 if dataset:
                     print(f'[DB][{get_ts_id()}] create_queue is empty')
+            except ConnectionError:
+                print(f'[DB][{get_ts_id()}] Failed to get cursor. Sleep 3.')
+                DataQueue.create_queue.put_nowait(post_data)
+                self.retry_count += 1
+                sleep(3)
             finally:
                 post_data = None
             # END
@@ -141,33 +147,37 @@ class SensorController(threading.Thread):
 
     def run(self):
         while True:
-            temperature, humidity, pressure = self.bme280.get_all()
-            sea_level_pressure = self.bme280.get_sea_level_pressure(
-                pressure, temperature
-            )
-            illuminance = self.bh1750.get_illuminance()
-            DataQueue.create_queue.put_nowait(
-                {
-                    'home_measures': {
-                        'ts_id': get_ts_id(),
-                        'room': '\'outdoors\'',
-                        'temperature': temperature,
-                        'pressure': sea_level_pressure,
-                        'humidity': humidity
+            try:
+                temperature, humidity, pressure = self.bme280.get_all()
+                sea_level_pressure = self.bme280.get_sea_level_pressure(
+                    pressure, temperature
+                )
+                illuminance = self.bh1750.get_illuminance()
+                DataQueue.create_queue.put_nowait(
+                    {
+                        'home_measures': {
+                            'ts_id': get_ts_id(),
+                            'room': '\'outdoors\'',
+                            'temperature': temperature,
+                            'pressure': sea_level_pressure,
+                            'humidity': humidity
+                        }
                     }
-                }
-            )
+                )
 
-            DataQueue.create_queue.put_nowait(
-                {
-                    'illuminance': {
-                        'ts_id': get_ts_id(),
-                        'room': '\'outdoors\'',
-                        'illuminance': illuminance
+                DataQueue.create_queue.put_nowait(
+                    {
+                        'illuminance': {
+                            'ts_id': get_ts_id(),
+                            'room': '\'outdoors\'',
+                            'illuminance': illuminance
+                        }
                     }
-                }
-            )
-            sleep(60)
+                )
+            except OSError:
+                print(f'[BME][{get_ts_id()}] Failed to read from BME280')
+            finally:
+                sleep(60)
 
 
 class ThreadWatcher(threading.Thread):
